@@ -1,0 +1,25 @@
+# ==============================================================================
+# CRYOGENIC ACCELERATOR SINGLE SOURCE OF TRUTH (SSOT) DEFINITION
+# Tracks real-time configuration arrays, system lineage metrics, and code revisions.
+# ==============================================================================
+version_control:
+  current_version: "2.4.1-build.108"
+  schema_spec: "1.2.0"
+  lineage:
+    commit_sha: "g7a8f9c2e"
+    author: "Systems Design Group"
+    upstream_sources:
+      - id: "NIST-Ref-HE4"
+        uri: "https://www.nist.gov/publications/helium-properties"
+  changelog:
+    - version: "2.4.1-build.108"
+      date: "2026-05-20"
+      type: "HMI_IMPROVEMENT"
+      description: "Refined cryogenic dynamic heat load calculations near Lambda point."
+
+engineering_metrics:
+  heat_loads:
+    cryomodule_static_loss: { value: 1.5, unit: "W/m" }
+    dynamic_rf_load: { value: 14.5, unit: "W" }
+  mass_balances:
+    helium_flow_rate: { value: 0.08, unit: "kg/s" }

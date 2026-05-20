@@ -1,0 +1,25 @@
+{
+  "knowledge_topology": {
+    "graph_version": "1.0.0",
+    "nodes": {
+      "NODE_ENTRY_SSOT": {
+        "title": "Central System Configuration Source",
+        "file_anchor": "config/engineering_data.yaml",
+        "description": "Primary parameters data matrix driving system outputs.",
+        "outbound_links": ["NODE_PHYSICS_CORE", "NODE_HMI_DASHBOARD"]
+      },
+      "NODE_PHYSICS_CORE": {
+        "title": "Thermodynamic Verification Logic",
+        "file_anchor": "src/physics_validator.py",
+        "description": "Evaluates fluid displacement streams using polynomial models.",
+        "outbound_links": ["NODE_VERIFICATION_REPORT"]
+      },
+      "NODE_HMI_DASHBOARD": {
+        "title": "Interactive Client Control Room Simulator",
+        "file_anchor": "web/app.html",
+        "description": "Split-pane runtime interface rendering dynamic SVGs and Plotly matrices.",
+        "outbound_links": ["NODE_TRANSFER_BUNDLE"]
+      }
+    }
+  }
+}

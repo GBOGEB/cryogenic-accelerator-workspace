@@ -1,0 +1,85 @@
+# ═══════════════════════════════════════════════════════════════
+# Cryogenic Accelerator Workspace — .gitignore
+# ═══════════════════════════════════════════════════════════════
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS
+.Xdefaults
+.bashrc
+.npmrc
+.chrome_profile_copy.log
+
+# Logs
+*.log
+.logs/
+.log_backup/
+
+# Local config (not workspace)
+.config/
+.local/
+.npm/
+.npm-global/
+.cache/
+.memories/
+.shared_schema_files/
+.disabled_skills/
+.external_service_outputs/
+
+# Uploads (user messages, not part of workspace)
+Uploads/
+
+# Skills (system)
+skills/
+conversation_skills/
+
+# GBOGEB repos (separate projects)
+gbogeb_abacus/
+gbogeb_codex/
+gbogeb_mcp_server/
+github_repos/
+
+# Deployment scripts (separate from workspace)
+gba_deploy.sh
+gbc_deploy.sh
+verify_deployment.sh
+gbogeb_deployment_tracker.html
+deployment_tracker.html
+GBOGEB_FINAL_STATUS.html
+DEPLOYMENT_SUMMARY.txt
+DEPLOYMENT_GUIDE.*
+EXECUTION_REPORT.*
+
+# Generated bundles (rebuilt by CI)
+# web/workspace_bundle.tar.gz  # Keep in repo for convenience
+
+# Node
+node_modules/

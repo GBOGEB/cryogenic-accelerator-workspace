@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Engineering Discovery Hub & Knowledge Topology</title>
+    <style>
+        :root { --bg: #0b0c10; --panel: #1f2833; --border: #45a29e; --cyan: #66fcf1; --text: #c5c6c7; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; }
+        .hub-container { max-width: 1100px; margin: 0 auto; }
+        header { border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+        h1 { margin: 0; color: #fff; font-size: 28px; }
+        .download-banner { background: rgba(70, 162, 158, 0.15); border: 1px dashed var(--border); padding: 20px; border-radius: 6px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-download { background: var(--border); color: var(--bg); padding: 12px 24px; font-weight: bold; border-radius: 4px; text-decoration: none; font-size: 14px; }
+        .grid-topology { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
+        .node-card { background: var(--panel); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 25px; }
+        .node-tag { font-family: monospace; font-size: 11px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; color: var(--cyan); width: max-content; }
+        .node-title { font-size: 18px; color: #fff; margin: 15px 0 10px 0; }
+        .node-meta { font-size: 13px; color: #888; font-family: monospace; }
+        .btn-link { display: inline-block; margin-top: 15px; color: var(--cyan); text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="hub-container">
+        <header>
+            <div>
+                <h1>Cryogenic Accelerator Knowledge Network</h1>
+                <small style="color: var(--border);">Active Distribution Version: v2.4.1-build.108</small>
+            </div>
+        </header>
+        <div class="download-banner">
+            <div>
+                <strong style="color: #fff; display: block; margin-bottom: 4px;">Transfer System State Archive</strong>
+                <span style="font-size: 13px; color: #aaa;">Contains complete workspace context files (Manifest, Code layers, Visuals, and Execution documentation).</span>
+            </div>
+            <a href="workspace_bundle.tar.gz" class="btn-download">Download workspace_bundle.tar.gz</a>
+        </div>
+        <div class="grid-topology">
+            <div class="node-card">
+                <div class="node-tag">ENTRY HOOK</div>
+                <div class="node-title">Single Source of Truth (SSOT)</div>
+                <div class="node-meta">📁 config/engineering_data.yaml</div>
+                <p>Central parameters repository managing thermodynamic metrics limits, project lineage information, and development change logs.</p>
+            </div>
+            <div class="node-card">
+                <div class="node-tag">LIVE INTERACTION</div>
+                <div class="node-title">Interactive HMI Workbench</div>
+                <div class="node-meta">📁 web/app.html</div>
+                <p>Split-pane runtime interface rendering dynamic HTML layouts and synchronized data models.</p>
+                <a href="app.html" class="btn-link">Open HMI Simulator →</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
