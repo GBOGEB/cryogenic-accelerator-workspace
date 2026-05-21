@@ -83,3 +83,9 @@ EXECUTION_REPORT.*
 
 # Node
 node_modules/
+
+# Helper files
+workspace_clone/
+workflow_patch/
+workflow_update.tar.gz
+update_workflows.py
