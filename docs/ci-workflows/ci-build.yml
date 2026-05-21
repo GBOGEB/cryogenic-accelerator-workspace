@@ -60,6 +60,15 @@ jobs:
       - name: Extract
         run: |
           mkdir -p /tmp/ex
-          tar xzf web/workspace_bundle.tar.gz -C /tmp/ex 2>/dev/null || \
-            tar xzf workspace_bundle.tar.gz -C /tmp/ex 2>/dev/null || true
-          echo "✅ Extracted $(find /tmp/ex -type f | wc -l) files"
+          if [ -f "web/workspace_bundle.tar.gz" ]; then
+            ARCHIVE="web/workspace_bundle.tar.gz"
+          elif [ -f "workspace_bundle.tar.gz" ]; then
+            ARCHIVE="workspace_bundle.tar.gz"
+          else
+            echo "❌ Missing bundle archive"
+            exit 1
+          fi
+          tar xzf "$ARCHIVE" -C /tmp/ex 2>/dev/null
+          FILE_COUNT=$(find /tmp/ex -type f | wc -l)
+          [ "$FILE_COUNT" -gt 0 ] || { echo "❌ Extraction produced no files"; exit 1; }
+          echo "✅ Extracted ${FILE_COUNT} files"
