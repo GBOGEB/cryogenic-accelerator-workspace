@@ -15,39 +15,78 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+env:
+  PYTHON_VERSION: '3.11'
+
 jobs:
+  # ──────────────────────────────────────────────
+  # JOB 1: Build Pages Artifact
+  # ──────────────────────────────────────────────
   build-pages:
-    name: Build Pages
+    name: "🏗️ Build Pages"
     runs-on: ubuntu-latest
     environment:
       name: staging
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
-      - name: Verify web files
+
+      - name: Verify web directory
         run: |
           for f in web/index.html web/app.html; do
-            [ -f "$f" ] && echo "✅ $f" || { echo "❌ $f"; exit 1; }
+            if [ -f "$f" ]; then
+              echo "  ✅ $f ($(wc -c < "$f") bytes)"
+            else
+              echo "  ❌ $f — MISSING"
+              exit 1
+            fi
           done
+
       - name: Inject deployment metadata
         run: |
-          python3 -c "
+          python3 << 'EOF'
           import datetime, os
-          meta = '<!-- DEPLOY: ${{ github.sha }} | ' + datetime.datetime.utcnow().isoformat() + 'Z -->'
+          sha = os.environ.get('GITHUB_SHA', 'local')[:8]
+          ts = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+          meta_tag = f'<!-- DEPLOY: {sha} | {ts} -->'
+          version_meta = f'<meta name="deploy-commit" content="{sha}">'
+
           for h in ['web/index.html', 'web/app.html']:
-              if os.path.exists(h):
-                  c = open(h).read()
-                  if '<!-- DEPLOY:' not in c:
-                      open(h, 'w').write(c.replace('<head>', '<head>\\n' + meta, 1))
-                  print(f'✅ {h}')
-          "
+              if not os.path.exists(h):
+                  continue
+              c = open(h).read()
+              if '<!-- DEPLOY:' not in c:
+                  c = c.replace('<head>', f'<head>\n    {meta_tag}\n    {version_meta}', 1)
+                  open(h, 'w').write(c)
+              print(f'  ✅ {h} — stamped {sha}')
+          EOF
+
+      - name: Create deployment index
+        run: |
+          python3 << 'EOF'
+          import os, datetime
+          sha = os.environ.get('GITHUB_SHA', 'local')[:8]
+          ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+          # Ensure static dirs exist
+          os.makedirs('web/static/js', exist_ok=True)
+          os.makedirs('web/static/css', exist_ok=True)
+          # Write deployment marker
+          with open('web/.deploy-info', 'w') as f:
+              f.write(f"commit={sha}\ntime={ts}\n")
+          print(f"✅ Deploy marker: {sha} @ {ts}")
+          EOF
+
       - uses: actions/configure-pages@v5
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/
 
+  # ──────────────────────────────────────────────
+  # JOB 2: Deploy to GitHub Pages (Production)
+  # ──────────────────────────────────────────────
   deploy:
-    name: Deploy to Production
+    name: "🚀 Deploy to Production"
     runs-on: ubuntu-latest
     needs: build-pages
     environment:
@@ -56,6 +95,14 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-      - run: |
-          echo "🚀 DEPLOYED: ${{ steps.deployment.outputs.page_url }}"
-          echo "Commit: ${{ github.sha }}"
+
+      - name: Deployment summary
+        run: |
+          echo "══════════════════════════════════════"
+          echo "  DEPLOYMENT — PRODUCTION"
+          echo "══════════════════════════════════════"
+          echo "  URL:    ${{ steps.deployment.outputs.page_url }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Ref:    ${{ github.ref }}"
+          echo "══════════════════════════════════════"
+          echo "🚀 Deployed successfully"

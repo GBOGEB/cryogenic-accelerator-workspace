@@ -89,3 +89,7 @@ workspace_clone/
 workflow_patch/
 workflow_update.tar.gz
 update_workflows.py
+
+# Workflow files (require workflow-scope token to push)
+.github/workflows/
+PATCH_HANDOVER.md

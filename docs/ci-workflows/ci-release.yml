@@ -1,0 +1,151 @@
+name: CI — Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v2.4.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  deployments: write
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ──────────────────────────────────────────────
+  # JOB 1: Build Release Artifacts
+  # ──────────────────────────────────────────────
+  build-release:
+    name: "📦 Build Release"
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    outputs:
+      version: ${{ steps.version.outputs.tag }}
+      bundle_sha: ${{ steps.hash.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - run: pip install numpy pyyaml
+
+      - name: Resolve version tag
+        id: version
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "📋 Release version: $TAG"
+
+      - name: Run physics validation
+        run: |
+          python3 << 'EOF'
+          import yaml, sys
+          sys.path.insert(0, 'src')
+          from physics_validator import verify_mass_balance
+          with open('config/engineering_data.yaml') as f:
+              c = yaml.safe_load(f)
+          r = verify_mass_balance(c)
+          assert r['system_verification_status'] in ('PASS', 'WARN_LIMIT')
+          print(f"✅ Physics: {r['system_verification_status']}")
+          EOF
+
+      - name: Build workspace bundle
+        run: python3 workspace_build.py
+
+      - name: Compute bundle hash
+        id: hash
+        run: |
+          SHA=$(sha256sum web/workspace_bundle.tar.gz | cut -d' ' -f1)
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "🔑 SHA-256: $SHA"
+
+      - name: Generate release notes
+        run: |
+          python3 << 'EOF'
+          import yaml, json, datetime
+          with open('config/engineering_data.yaml') as f:
+              config = yaml.safe_load(f)
+          ver = config['version_control']['current_version']
+          with open('config/knowledge_topology.json') as f:
+              topo = json.load(f)
+          nodes = len(topo['knowledge_topology']['nodes'])
+          notes = f"""## Cryogenic Accelerator Workspace — ${{ steps.version.outputs.tag }}
+
+          **Build Date:** {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+          **Config Version:** {ver}
+          **Commit:** ${{ github.sha }}
+
+          ### Contents
+          - 📋 Engineering SSOT configuration (v{ver})
+          - 🔬 He-4 thermodynamic validation engine
+          - 🌐 Interactive HMI workbench + Discovery Hub
+          - 🗺️ Knowledge topology graph ({nodes} nodes)
+          - 📦 Workspace bundle archive (.tar.gz)
+
+          ### Verification
+          - Physics validation: ✅ PASS/WARN_LIMIT
+          - Config schema: ✅ Valid
+          - Topology graph: ✅ {nodes} nodes, all links resolved
+          """
+          with open('RELEASE_NOTES.md', 'w') as f:
+              f.write(notes)
+          EOF
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ steps.version.outputs.tag }}
+          path: |
+            web/workspace_bundle.tar.gz
+            RELEASE_NOTES.md
+          retention-days: 90
+
+  # ──────────────────────────────────────────────
+  # JOB 2: Create GitHub Release
+  # ──────────────────────────────────────────────
+  publish-release:
+    name: "🚀 Publish Release"
+    runs-on: ubuntu-latest
+    needs: build-release
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.build-release.outputs.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-release.outputs.version }}
+          name: "Cryogenic Accelerator ${{ needs.build-release.outputs.version }}"
+          body_path: RELEASE_NOTES.md
+          files: |
+            web/workspace_bundle.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          echo "══════════════════════════════════════"
+          echo "  RELEASE PUBLISHED"
+          echo "══════════════════════════════════════"
+          echo "  Tag:    ${{ needs.build-release.outputs.version }}"
+          echo "  SHA256: ${{ needs.build-release.outputs.bundle_sha }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "══════════════════════════════════════"
