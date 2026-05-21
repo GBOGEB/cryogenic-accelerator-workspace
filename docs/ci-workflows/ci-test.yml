@@ -1,0 +1,148 @@
+name: CI — Test & Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+
+jobs:
+  validate-configs:
+    name: Validate Configs
+    runs-on: ubuntu-latest
+    environment:
+      name: testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pyyaml jsonschema
+      - name: Validate engineering_data.yaml
+        run: |
+          python3 -c "
+          import yaml
+          with open('config/engineering_data.yaml') as f:
+              data = yaml.safe_load(f)
+          assert 'version_control' in data
+          assert 'engineering_metrics' in data
+          heat = data['engineering_metrics']['heat_loads']
+          assert heat['cryomodule_static_loss']['value'] > 0
+          assert heat['dynamic_rf_load']['value'] > 0
+          ver = data['version_control']['current_version']
+          print(f'✅ engineering_data.yaml — VALID (v{ver})')
+          "
+      - name: Validate knowledge_topology.json
+        run: |
+          python3 -c "
+          import json
+          with open('config/knowledge_topology.json') as f:
+              data = json.load(f)
+          nodes = data['knowledge_topology']['nodes']
+          assert len(nodes) >= 1
+          for nid, n in nodes.items():
+              assert 'title' in n and 'file_anchor' in n
+              for link in n.get('outbound_links', []):
+                  assert link in nodes, f'{nid}: broken link {link}'
+          print(f'✅ knowledge_topology.json — VALID ({len(nodes)} nodes)')
+          "
+
+  physics-tests:
+    name: Physics Validation
+    runs-on: ubuntu-latest
+    needs: validate-configs
+    environment:
+      name: testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy pyyaml
+      - name: Run mass balance verification
+        run: |
+          python3 -c "
+          import yaml, sys
+          sys.path.insert(0, 'src')
+          from physics_validator import verify_mass_balance
+          with open('config/engineering_data.yaml') as f:
+              config = yaml.safe_load(f)
+          result = verify_mass_balance(config)
+          print('═' * 50)
+          print('  PHYSICS VALIDATION REPORT')
+          print('═' * 50)
+          print(f'  h_in:  {result[\"enthalpy_in_j_g\"]} J/g')
+          print(f'  h_out: {result[\"enthalpy_out_j_g\"]} J/g')
+          print(f'  m_dot: {result[\"calculated_mass_flow_kg_s\"]} kg/s')
+          print(f'  Status: {result[\"system_verification_status\"]}')
+          print('═' * 50)
+          status = result['system_verification_status']
+          assert status in ('PASS', 'WARN_LIMIT'), f'FAILED: {status}'
+          assert result['calculated_mass_flow_kg_s'] > 0
+          assert result['enthalpy_out_j_g'] > result['enthalpy_in_j_g']
+          print('✅ All physics assertions PASSED')
+          "
+      - name: HeliumPropertyEngine unit tests
+        run: |
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from physics_validator import HeliumPropertyEngine
+          e = HeliumPropertyEngine()
+          assert e.get_enthalpy(2.0, 1.0) > 0
+          h4 = e.get_enthalpy(4.2, 1.0)
+          assert h4 > 0
+          assert e.get_enthalpy(5.0, 1.0) > h4
+          assert e.get_enthalpy(4.2, 1.0) == h4
+          assert e.get_enthalpy(2.17, 1.0) > 0
+          print('=== ALL 5 ENGINE TESTS PASSED ===')
+          "
+
+  integrity-check:
+    name: Workspace Integrity
+    runs-on: ubuntu-latest
+    environment:
+      name: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify required files
+        run: |
+          for f in config/engineering_data.yaml config/knowledge_topology.json \
+                   src/physics_validator.py web/index.html web/app.html \
+                   workspace_build.py README.md .gitignore; do
+            [ -f "$f" ] && echo "  ✅ $f" || { echo "  ❌ $f"; exit 1; }
+          done
+      - name: Validate HTML
+        run: |
+          python3 -c "
+          for p in ['web/index.html', 'web/app.html']:
+              c = open(p).read()
+              assert '<html' in c.lower() and '</html>' in c.lower()
+              print(f'✅ {p} — {len(c)/1024:.1f} KB')
+          "
+
+  publish-status:
+    name: Publish Test Status
+    runs-on: ubuntu-latest
+    needs: [validate-configs, physics-tests, integrity-check]
+    if: always()
+    environment:
+      name: testing
+    steps:
+      - name: Summary
+        run: |
+          echo "Configs:   ${{ needs.validate-configs.result }}"
+          echo "Physics:   ${{ needs.physics-tests.result }}"
+          echo "Integrity: ${{ needs.integrity-check.result }}"
+          if [ "${{ needs.validate-configs.result }}" != "success" ] || \
+             [ "${{ needs.physics-tests.result }}" != "success" ] || \
+             [ "${{ needs.integrity-check.result }}" != "success" ]; then
+            exit 1
+          fi
+          echo "✅ All passed"
