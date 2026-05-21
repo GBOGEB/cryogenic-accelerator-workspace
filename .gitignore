@@ -89,3 +89,7 @@ workspace_clone/
 workflow_patch/
 workflow_update.tar.gz
 update_workflows.py
+
+# Auto-generated docs
+*.docx
+*.pdf
