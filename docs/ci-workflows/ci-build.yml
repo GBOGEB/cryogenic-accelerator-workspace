@@ -122,9 +122,19 @@ jobs:
       - name: Extract and validate
         run: |
           mkdir -p /tmp/extracted
-          tar xzf web/workspace_bundle.tar.gz -C /tmp/extracted 2>/dev/null || \
-            tar xzf workspace_bundle.tar.gz -C /tmp/extracted 2>/dev/null || true
+          if [ -f web/workspace_bundle.tar.gz ]; then
+            tar xzf web/workspace_bundle.tar.gz -C /tmp/extracted
+          elif [ -f workspace_bundle.tar.gz ]; then
+            tar xzf workspace_bundle.tar.gz -C /tmp/extracted
+          else
+            echo "❌ Bundle archive not found in expected locations" >&2
+            exit 1
+          fi
           FILES=$(find /tmp/extracted -type f | wc -l)
+          if [ "$FILES" -le 0 ]; then
+            echo "❌ Extraction produced no files" >&2
+            exit 1
+          fi
           echo "✅ Extracted $FILES files"
           find /tmp/extracted -type f -exec echo "  📄 {}" \;
 
