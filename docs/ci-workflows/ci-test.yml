@@ -12,9 +12,15 @@ permissions:
   deployments: write
   statuses: write
 
+env:
+  PYTHON_VERSION: '3.11'
+
 jobs:
+  # ──────────────────────────────────────────────
+  # JOB 1: YAML/JSON Schema Validation
+  # ──────────────────────────────────────────────
   validate-configs:
-    name: Validate Configs
+    name: "📋 Validate Configs"
     runs-on: ubuntu-latest
     environment:
       name: testing
@@ -22,39 +28,134 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
       - run: pip install pyyaml jsonschema
-      - name: Validate engineering_data.yaml
+
+      - name: Validate YAML syntax (all .yaml/.yml files)
         run: |
-          python3 -c "
-          import yaml
+          python3 << 'EOF'
+          import yaml, glob, sys
+          errors = 0
+          for pattern in ['config/*.yaml', 'config/*.yml']:
+              for f in glob.glob(pattern):
+                  try:
+                      with open(f) as fh:
+                          yaml.safe_load(fh)
+                      print(f"  ✅ {f}")
+                  except yaml.YAMLError as e:
+                      print(f"  ❌ {f}: {e}")
+                      errors += 1
+          sys.exit(1 if errors else 0)
+          EOF
+
+      - name: Validate engineering_data.yaml schema
+        run: |
+          python3 << 'EOF'
+          import yaml, json
+          from jsonschema import validate, ValidationError
+
+          schema = {
+              "type": "object",
+              "required": ["version_control", "engineering_metrics"],
+              "properties": {
+                  "version_control": {
+                      "type": "object",
+                      "required": ["current_version", "schema_spec"],
+                      "properties": {
+                          "current_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+"},
+                          "schema_spec": {"type": "string"}
+                      }
+                  },
+                  "engineering_metrics": {
+                      "type": "object",
+                      "required": ["heat_loads"],
+                      "properties": {
+                          "heat_loads": {
+                              "type": "object",
+                              "required": ["cryomodule_static_loss", "dynamic_rf_load"],
+                              "properties": {
+                                  "cryomodule_static_loss": {
+                                      "type": "object",
+                                      "required": ["value", "unit"],
+                                      "properties": {
+                                          "value": {"type": "number", "exclusiveMinimum": 0},
+                                          "unit": {"type": "string"}
+                                      }
+                                  },
+                                  "dynamic_rf_load": {
+                                      "type": "object",
+                                      "required": ["value", "unit"],
+                                      "properties": {
+                                          "value": {"type": "number", "exclusiveMinimum": 0},
+                                          "unit": {"type": "string"}
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
           with open('config/engineering_data.yaml') as f:
               data = yaml.safe_load(f)
-          assert 'version_control' in data
-          assert 'engineering_metrics' in data
-          heat = data['engineering_metrics']['heat_loads']
-          assert heat['cryomodule_static_loss']['value'] > 0
-          assert heat['dynamic_rf_load']['value'] > 0
+          validate(instance=data, schema=schema)
           ver = data['version_control']['current_version']
-          print(f'✅ engineering_data.yaml — VALID (v{ver})')
-          "
+          print(f'✅ engineering_data.yaml — schema VALID (v{ver})')
+          EOF
+
       - name: Validate knowledge_topology.json
         run: |
-          python3 -c "
+          python3 << 'EOF'
           import json
+          from jsonschema import validate
+
+          schema = {
+              "type": "object",
+              "required": ["knowledge_topology"],
+              "properties": {
+                  "knowledge_topology": {
+                      "type": "object",
+                      "required": ["graph_version", "nodes"],
+                      "properties": {
+                          "graph_version": {"type": "string"},
+                          "nodes": {
+                              "type": "object",
+                              "minProperties": 1,
+                              "additionalProperties": {
+                                  "type": "object",
+                                  "required": ["title", "file_anchor"],
+                                  "properties": {
+                                      "title": {"type": "string"},
+                                      "file_anchor": {"type": "string"},
+                                      "description": {"type": "string"},
+                                      "outbound_links": {"type": "array", "items": {"type": "string"}}
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
           with open('config/knowledge_topology.json') as f:
               data = json.load(f)
-          nodes = data['knowledge_topology']['nodes']
-          assert len(nodes) >= 1
-          for nid, n in nodes.items():
-              assert 'title' in n and 'file_anchor' in n
-              for link in n.get('outbound_links', []):
-                  assert link in nodes, f'{nid}: broken link {link}'
-          print(f'✅ knowledge_topology.json — VALID ({len(nodes)} nodes)')
-          "
+          validate(instance=data, schema=schema)
 
+          # Validate graph integrity (no broken links)
+          nodes = data['knowledge_topology']['nodes']
+          for nid, n in nodes.items():
+              for link in n.get('outbound_links', []):
+                  assert link in nodes, f'{nid}: broken link → {link}'
+          print(f'✅ knowledge_topology.json — schema VALID ({len(nodes)} nodes, graph intact)')
+          EOF
+
+  # ──────────────────────────────────────────────
+  # JOB 2: Python Unit Tests + Coverage
+  # ──────────────────────────────────────────────
   physics-tests:
-    name: Physics Validation
+    name: "🔬 Physics Unit Tests"
     runs-on: ubuntu-latest
     needs: validate-configs
     environment:
@@ -63,86 +164,298 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - run: pip install numpy pyyaml
-      - name: Run mass balance verification
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install numpy pyyaml pytest pytest-cov
+
+      - name: Create test suite
         run: |
-          python3 -c "
-          import yaml, sys
+          mkdir -p tests
+          cat > tests/test_physics_validator.py << 'PYTEST'
+          """Unit tests for HeliumPropertyEngine and mass balance verification."""
+          import sys, os, yaml, pytest
+          sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+          from physics_validator import HeliumPropertyEngine, verify_mass_balance
+
+          class TestHeliumPropertyEngine:
+              def setup_method(self):
+                  self.engine = HeliumPropertyEngine()
+
+              def test_enthalpy_below_lambda(self):
+                  """Below lambda point (2.17 K) uses superfluid model."""
+                  h = self.engine.get_enthalpy(2.0, 1.0)
+                  assert h > 0
+                  assert isinstance(h, float)
+
+              def test_enthalpy_at_lambda(self):
+                  """At lambda point boundary."""
+                  h = self.engine.get_enthalpy(2.17, 1.0)
+                  assert h > 0
+
+              def test_enthalpy_above_lambda(self):
+                  """Above lambda point uses polynomial fit."""
+                  h = self.engine.get_enthalpy(4.2, 1.0)
+                  assert h > 0
+
+              def test_enthalpy_monotonic(self):
+                  """Enthalpy increases with temperature above lambda."""
+                  h1 = self.engine.get_enthalpy(4.2, 1.0)
+                  h2 = self.engine.get_enthalpy(4.5, 1.0)
+                  h3 = self.engine.get_enthalpy(5.0, 1.0)
+                  assert h2 > h1
+                  assert h3 > h2
+
+              def test_enthalpy_deterministic(self):
+                  """Same inputs produce same outputs."""
+                  h1 = self.engine.get_enthalpy(4.2, 1.0)
+                  h2 = self.engine.get_enthalpy(4.2, 1.0)
+                  assert h1 == h2
+
+              def test_enthalpy_low_temp(self):
+                  """Very low temp superfluid region."""
+                  h = self.engine.get_enthalpy(1.5, 1.0)
+                  assert h > 0 and h < 100
+
+          class TestMassBalance:
+              def setup_method(self):
+                  with open('config/engineering_data.yaml') as f:
+                      self.config = yaml.safe_load(f)
+
+              def test_mass_balance_returns_dict(self):
+                  result = verify_mass_balance(self.config)
+                  assert isinstance(result, dict)
+
+              def test_mass_balance_keys(self):
+                  result = verify_mass_balance(self.config)
+                  expected = {'calculated_mass_flow_kg_s', 'enthalpy_in_j_g',
+                              'enthalpy_out_j_g', 'system_verification_status'}
+                  assert set(result.keys()) == expected
+
+              def test_mass_flow_positive(self):
+                  result = verify_mass_balance(self.config)
+                  assert result['calculated_mass_flow_kg_s'] > 0
+
+              def test_enthalpy_delta_positive(self):
+                  result = verify_mass_balance(self.config)
+                  assert result['enthalpy_out_j_g'] > result['enthalpy_in_j_g']
+
+              def test_status_valid(self):
+                  """Status must be PASS or WARN_LIMIT (never FAIL for valid config)."""
+                  result = verify_mass_balance(self.config)
+                  assert result['system_verification_status'] in ('PASS', 'WARN_LIMIT')
+
+              def test_mass_balance_reproducible(self):
+                  r1 = verify_mass_balance(self.config)
+                  r2 = verify_mass_balance(self.config)
+                  assert r1 == r2
+          PYTEST
+
+      - name: Run tests with coverage
+        run: |
+          python3 -m pytest tests/test_physics_validator.py -v \
+            --tb=short --cov=src --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --junitxml=test-results.xml
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage-${{ github.sha }}
+          path: |
+            coverage.xml
+            test-results.xml
+          retention-days: 14
+
+  # ──────────────────────────────────────────────
+  # JOB 3: Integration Tests
+  # ──────────────────────────────────────────────
+  integration-tests:
+    name: "🔗 Integration Tests"
+    runs-on: ubuntu-latest
+    needs: validate-configs
+    environment:
+      name: testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install numpy pyyaml
+
+      - name: End-to-end workspace generation
+        run: |
+          python3 workspace_build.py
+          echo "✅ workspace_build.py completed"
+
+      - name: Verify generated files
+        run: |
+          python3 << 'EOF'
+          import os, json, yaml
+          required = [
+              'config/engineering_data.yaml',
+              'config/knowledge_topology.json',
+              'src/physics_validator.py',
+              'web/index.html',
+              'web/app.html',
+              'web/workspace_bundle.tar.gz'
+          ]
+          for f in required:
+              assert os.path.isfile(f), f"Missing: {f}"
+              size = os.path.getsize(f)
+              assert size > 0, f"Empty: {f}"
+              print(f"  ✅ {f} ({size:,} bytes)")
+          print(f"\n✅ All {len(required)} files verified")
+          EOF
+
+      - name: Verify tarball contents
+        run: |
+          python3 << 'EOF'
+          import tarfile
+          with tarfile.open('web/workspace_bundle.tar.gz', 'r:gz') as t:
+              members = t.getnames()
+              print(f"Archive contains {len(members)} entries:")
+              for m in sorted(members):
+                  print(f"  📦 {m}")
+              assert len(members) >= 4, "Too few entries"
+          print("✅ Archive integrity verified")
+          EOF
+
+      - name: Topology → file anchor validation
+        run: |
+          python3 << 'EOF'
+          import json, os
+          with open('config/knowledge_topology.json') as f:
+              nodes = json.load(f)['knowledge_topology']['nodes']
+          for nid, n in nodes.items():
+              anchor = n['file_anchor']
+              assert os.path.isfile(anchor), f"{nid}: anchor missing → {anchor}"
+              print(f"  ✅ {nid} → {anchor}")
+          print(f"✅ All {len(nodes)} topology anchors validated")
+          EOF
+
+      - name: Cross-config consistency check
+        run: |
+          python3 << 'EOF'
+          import yaml, json, sys
           sys.path.insert(0, 'src')
           from physics_validator import verify_mass_balance
           with open('config/engineering_data.yaml') as f:
               config = yaml.safe_load(f)
           result = verify_mass_balance(config)
-          print('═' * 50)
-          print('  PHYSICS VALIDATION REPORT')
-          print('═' * 50)
-          print(f'  h_in:  {result[\"enthalpy_in_j_g\"]} J/g')
-          print(f'  h_out: {result[\"enthalpy_out_j_g\"]} J/g')
-          print(f'  m_dot: {result[\"calculated_mass_flow_kg_s\"]} kg/s')
-          print(f'  Status: {result[\"system_verification_status\"]}')
-          print('═' * 50)
-          status = result['system_verification_status']
-          assert status in ('PASS', 'WARN_LIMIT'), f'FAILED: {status}'
+          assert result['system_verification_status'] in ('PASS', 'WARN_LIMIT')
           assert result['calculated_mass_flow_kg_s'] > 0
-          assert result['enthalpy_out_j_g'] > result['enthalpy_in_j_g']
-          print('✅ All physics assertions PASSED')
-          "
-      - name: HeliumPropertyEngine unit tests
-        run: |
-          python3 -c "
-          import sys
-          sys.path.insert(0, 'src')
-          from physics_validator import HeliumPropertyEngine
-          e = HeliumPropertyEngine()
-          assert e.get_enthalpy(2.0, 1.0) > 0
-          h4 = e.get_enthalpy(4.2, 1.0)
-          assert h4 > 0
-          assert e.get_enthalpy(5.0, 1.0) > h4
-          assert e.get_enthalpy(4.2, 1.0) == h4
-          assert e.get_enthalpy(2.17, 1.0) > 0
-          print('=== ALL 5 ENGINE TESTS PASSED ===')
-          "
+          with open('config/knowledge_topology.json') as f:
+              topo = json.load(f)
+          nodes = topo['knowledge_topology']['nodes']
+          assert 'NODE_PHYSICS_CORE' in nodes
+          assert nodes['NODE_PHYSICS_CORE']['file_anchor'] == 'src/physics_validator.py'
+          print("✅ Cross-config consistency verified")
+          EOF
 
+  # ──────────────────────────────────────────────
+  # JOB 4: Workspace Integrity
+  # ──────────────────────────────────────────────
   integrity-check:
-    name: Workspace Integrity
+    name: "🛡️ Workspace Integrity"
     runs-on: ubuntu-latest
     environment:
       name: testing
     steps:
       - uses: actions/checkout@v4
-      - name: Verify required files
+
+      - name: Verify required file inventory
         run: |
+          STATUS=0
           for f in config/engineering_data.yaml config/knowledge_topology.json \
                    src/physics_validator.py web/index.html web/app.html \
                    workspace_build.py README.md .gitignore; do
-            [ -f "$f" ] && echo "  ✅ $f" || { echo "  ❌ $f"; exit 1; }
+            if [ -f "$f" ]; then
+              echo "  ✅ $f ($(wc -c < "$f") bytes)"
+            else
+              echo "  ❌ $f — MISSING"
+              STATUS=1
+            fi
           done
-      - name: Validate HTML
+          exit $STATUS
+
+      - name: Validate HTML structure
         run: |
-          python3 -c "
+          python3 << 'EOF'
+          import re
           for p in ['web/index.html', 'web/app.html']:
               c = open(p).read()
-              assert '<html' in c.lower() and '</html>' in c.lower()
-              print(f'✅ {p} — {len(c)/1024:.1f} KB')
-          "
+              assert '<!DOCTYPE html>' in c or '<!doctype html>' in c.lower(), f"{p}: missing doctype"
+              assert '<html' in c.lower() and '</html>' in c.lower(), f"{p}: malformed html"
+              assert '<head>' in c.lower() and '</head>' in c.lower(), f"{p}: missing head"
+              assert '<body' in c.lower() and '</body>' in c.lower(), f"{p}: missing body"
+              title = re.search(r'<title>(.*?)</title>', c, re.IGNORECASE)
+              print(f'  ✅ {p} — {len(c)/1024:.1f} KB — title: "{title.group(1) if title else "N/A"}"')
+          print("✅ HTML validation passed")
+          EOF
 
+      - name: Check for sensitive data leaks
+        run: |
+          python3 << 'EOF'
+          import os, re
+          patterns = [
+              r'(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}',  # GitHub tokens
+              r'AKIA[A-Z0-9]{16}',                              # AWS keys
+              r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----',       # Private keys
+          ]
+          violations = []
+          for root, dirs, files in os.walk('.'):
+              dirs[:] = [d for d in dirs if d not in {'.git', 'node_modules', '__pycache__'}]
+              for fn in files:
+                  fp = os.path.join(root, fn)
+                  if not fn.endswith(('.py', '.yaml', '.yml', '.json', '.html', '.md', '.js', '.css')):
+                      continue
+                  try:
+                      content = open(fp).read()
+                      for pat in patterns:
+                          if re.search(pat, content):
+                              violations.append(f"{fp}: matches {pat[:30]}...")
+                  except: pass
+          if violations:
+              for v in violations:
+                  print(f"  ❌ {v}")
+              exit(1)
+          print("✅ No sensitive data detected")
+          EOF
+
+  # ──────────────────────────────────────────────
+  # JOB 5: Publish Test Summary
+  # ──────────────────────────────────────────────
   publish-status:
-    name: Publish Test Status
+    name: "📊 Test Summary"
     runs-on: ubuntu-latest
-    needs: [validate-configs, physics-tests, integrity-check]
+    needs: [validate-configs, physics-tests, integration-tests, integrity-check]
     if: always()
     environment:
       name: testing
     steps:
-      - name: Summary
+      - name: Aggregate results
         run: |
-          echo "Configs:   ${{ needs.validate-configs.result }}"
-          echo "Physics:   ${{ needs.physics-tests.result }}"
-          echo "Integrity: ${{ needs.integrity-check.result }}"
-          if [ "${{ needs.validate-configs.result }}" != "success" ] || \
-             [ "${{ needs.physics-tests.result }}" != "success" ] || \
-             [ "${{ needs.integrity-check.result }}" != "success" ]; then
+          echo "══════════════════════════════════════"
+          echo "  CI TEST PIPELINE — SUMMARY"
+          echo "══════════════════════════════════════"
+          echo "  Configs:     ${{ needs.validate-configs.result }}"
+          echo "  Physics:     ${{ needs.physics-tests.result }}"
+          echo "  Integration: ${{ needs.integration-tests.result }}"
+          echo "  Integrity:   ${{ needs.integrity-check.result }}"
+          echo "══════════════════════════════════════"
+
+          FAILED=0
+          for r in "${{ needs.validate-configs.result }}" \
+                   "${{ needs.physics-tests.result }}" \
+                   "${{ needs.integration-tests.result }}" \
+                   "${{ needs.integrity-check.result }}"; do
+            [ "$r" != "success" ] && FAILED=1
+          done
+
+          if [ "$FAILED" = "1" ]; then
+            echo "❌ Pipeline has failures"
             exit 1
           fi
-          echo "✅ All passed"
+          echo "✅ All test jobs passed"

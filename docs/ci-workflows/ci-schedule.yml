@@ -1,0 +1,209 @@
+name: CI — Scheduled Checks
+
+on:
+  schedule:
+    # Nightly at 02:00 UTC (03:00 CET / 04:00 CEST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ──────────────────────────────────────────────
+  # JOB 1: Nightly Full Test Suite
+  # ──────────────────────────────────────────────
+  nightly-tests:
+    name: "🌙 Nightly Test Suite"
+    runs-on: ubuntu-latest
+    environment:
+      name: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - run: pip install numpy pyyaml pytest
+
+      - name: Full physics validation
+        run: |
+          python3 << 'EOF'
+          import yaml, sys
+          sys.path.insert(0, 'src')
+          from physics_validator import HeliumPropertyEngine, verify_mass_balance
+
+          engine = HeliumPropertyEngine()
+
+          # Sweep temperature range
+          print("═══ Temperature Sweep (1.5K → 8.0K) ═══")
+          temps = [1.5, 2.0, 2.17, 3.0, 4.0, 4.2, 4.5, 5.0, 6.0, 7.0, 8.0]
+          prev_h = None
+          for t in temps:
+              h = engine.get_enthalpy(t, 1.0)
+              marker = "  ✅" if h > 0 else "  ❌"
+              mono = ""
+              if prev_h is not None and t > 2.17:
+                  mono = " (monotonic ✓)" if h > prev_h else " (monotonic ✗ — REGRESSION)"
+              print(f"{marker} T={t:5.2f}K → h={h:8.3f} J/g{mono}")
+              prev_h = h
+
+          # Nominal mass balance
+          print("\n═══ Mass Balance Check ═══")
+          with open('config/engineering_data.yaml') as f:
+              config = yaml.safe_load(f)
+          r = verify_mass_balance(config)
+          for k, v in r.items():
+              print(f"  {k}: {v}")
+          assert r['system_verification_status'] in ('PASS', 'WARN_LIMIT')
+          print("\n✅ Nightly physics: ALL PASSED")
+          EOF
+
+      - name: Config drift detection
+        run: |
+          python3 << 'EOF'
+          import yaml, json, hashlib
+
+          # Hash configs for drift detection
+          configs = {
+              'config/engineering_data.yaml': None,
+              'config/knowledge_topology.json': None
+          }
+          for path in configs:
+              with open(path, 'rb') as f:
+                  configs[path] = hashlib.sha256(f.read()).hexdigest()[:16]
+              print(f"  📋 {path}: sha256={configs[path]}...")
+
+          # Validate topology integrity
+          with open('config/knowledge_topology.json') as f:
+              topo = json.load(f)
+          nodes = topo['knowledge_topology']['nodes']
+          for nid, n in nodes.items():
+              import os
+              anchor = n['file_anchor']
+              exists = os.path.isfile(anchor)
+              status = "✅" if exists else "❌ BROKEN"
+              print(f"  {status} {nid} → {anchor}")
+              assert exists, f"Broken anchor: {anchor}"
+
+          print("✅ Config drift check passed")
+          EOF
+
+  # ──────────────────────────────────────────────
+  # JOB 2: Nightly Build Verification
+  # ──────────────────────────────────────────────
+  nightly-build:
+    name: "🏗️ Nightly Build"
+    runs-on: ubuntu-latest
+    needs: nightly-tests
+    environment:
+      name: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - run: pip install numpy pyyaml
+
+      - name: Rebuild workspace
+        run: |
+          python3 workspace_build.py
+          [ -f "web/workspace_bundle.tar.gz" ] || { echo "❌ Bundle missing"; exit 1; }
+          SIZE=$(stat --format=%s "web/workspace_bundle.tar.gz" 2>/dev/null || stat -f%z "web/workspace_bundle.tar.gz")
+          echo "✅ Nightly build: ${SIZE} bytes"
+
+      - name: Verify HTML rendering
+        run: |
+          python3 << 'EOF'
+          import re
+          for path in ['web/index.html', 'web/app.html']:
+              html = open(path).read()
+              assert len(html) > 100, f"{path} too small"
+              assert '<html' in html.lower()
+              scripts = re.findall(r'<script[^>]*src="([^"]*)"', html)
+              styles = re.findall(r'<link[^>]*href="([^"]*\.css)"', html)
+              print(f"  ✅ {path}: {len(html)} bytes, {len(scripts)} scripts, {len(styles)} styles")
+          print("✅ HTML verified")
+          EOF
+
+      - name: Archive nightly bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_number }}
+          path: web/workspace_bundle.tar.gz
+          retention-days: 7
+
+  # ──────────────────────────────────────────────
+  # JOB 3: Dependency Health
+  # ──────────────────────────────────────────────
+  dependency-check:
+    name: "🔗 Dependency Health"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check Python dependencies
+        run: |
+          pip install numpy pyyaml
+          python3 << 'EOF'
+          import importlib
+          deps = {
+              'numpy': 'numpy',
+              'yaml': 'pyyaml',
+              'json': 'stdlib',
+              'tarfile': 'stdlib',
+              'os': 'stdlib'
+          }
+          for mod, pkg in deps.items():
+              try:
+                  m = importlib.import_module(mod)
+                  ver = getattr(m, '__version__', 'builtin')
+                  print(f"  ✅ {mod} ({pkg}): {ver}")
+              except ImportError:
+                  print(f"  ❌ {mod} ({pkg}): NOT FOUND")
+                  exit(1)
+          print("\n✅ All dependencies healthy")
+          EOF
+
+  # ──────────────────────────────────────────────
+  # JOB 4: Nightly Summary
+  # ──────────────────────────────────────────────
+  nightly-summary:
+    name: "📊 Nightly Summary"
+    runs-on: ubuntu-latest
+    needs: [nightly-tests, nightly-build, dependency-check]
+    if: always()
+    steps:
+      - name: Report
+        run: |
+          echo "══════════════════════════════════════"
+          echo "  NIGHTLY CI — $(date -u +%Y-%m-%d)"
+          echo "══════════════════════════════════════"
+          echo "  Tests:        ${{ needs.nightly-tests.result }}"
+          echo "  Build:        ${{ needs.nightly-build.result }}"
+          echo "  Dependencies: ${{ needs.dependency-check.result }}"
+          echo "══════════════════════════════════════"
+
+          FAILED=0
+          for r in "${{ needs.nightly-tests.result }}" \
+                   "${{ needs.nightly-build.result }}" \
+                   "${{ needs.dependency-check.result }}"; do
+            [ "$r" != "success" ] && FAILED=1
+          done
+
+          if [ "$FAILED" = "1" ]; then
+            echo "❌ Nightly pipeline has failures"
+            exit 1
+          fi
+          echo "✅ All nightly checks passed"

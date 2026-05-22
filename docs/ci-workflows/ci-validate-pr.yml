@@ -1,0 +1,209 @@
+name: CI — Validate PR
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ──────────────────────────────────────────────
+  # JOB 1: PR Metadata Checks
+  # ──────────────────────────────────────────────
+  pr-metadata:
+    name: "📝 PR Metadata"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $TITLE"
+          if [ ${#TITLE} -lt 10 ]; then
+            echo "❌ PR title too short (min 10 chars)"
+            exit 1
+          fi
+          echo "✅ PR title valid"
+
+      - name: Check PR body
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          if [ -z "$BODY" ] || [ ${#BODY} -lt 20 ]; then
+            echo "⚠️ PR description is empty or too short"
+            echo "Consider adding context for reviewers"
+          else
+            echo "✅ PR description present (${#BODY} chars)"
+          fi
+
+  # ──────────────────────────────────────────────
+  # JOB 2: Code Quality Checks
+  # ──────────────────────────────────────────────
+  code-quality:
+    name: "🔍 Code Quality"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - run: pip install numpy pyyaml
+
+      - name: Python syntax check
+        run: |
+          python3 << 'EOF'
+          import py_compile, glob, sys
+          errors = 0
+          for f in glob.glob('**/*.py', recursive=True):
+              try:
+                  py_compile.compile(f, doraise=True)
+                  print(f"  ✅ {f}")
+              except py_compile.PyCompileError as e:
+                  print(f"  ❌ {f}: {e}")
+                  errors += 1
+          if errors:
+              print(f"\n❌ {errors} file(s) with syntax errors")
+              sys.exit(1)
+          print("\n✅ All Python files have valid syntax")
+          EOF
+
+      - name: YAML lint
+        run: |
+          python3 << 'EOF'
+          import yaml, glob, sys
+          errors = 0
+          for f in glob.glob('config/*.yaml') + glob.glob('config/*.yml'):
+              try:
+                  with open(f) as fh:
+                      yaml.safe_load(fh)
+                  print(f"  ✅ {f}")
+              except yaml.YAMLError as e:
+                  print(f"  ❌ {f}: {e}")
+                  errors += 1
+          sys.exit(1 if errors else 0)
+          EOF
+
+      - name: JSON lint
+        run: |
+          python3 << 'EOF'
+          import json, glob, sys
+          errors = 0
+          for f in glob.glob('config/*.json'):
+              try:
+                  with open(f) as fh:
+                      json.load(fh)
+                  print(f"  ✅ {f}")
+              except json.JSONDecodeError as e:
+                  print(f"  ❌ {f}: {e}")
+                  errors += 1
+          sys.exit(1 if errors else 0)
+          EOF
+
+  # ──────────────────────────────────────────────
+  # JOB 3: Diff Impact Analysis
+  # ──────────────────────────────────────────────
+  diff-analysis:
+    name: "📊 Diff Analysis"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze changed files
+        run: |
+          echo "══════════════════════════════════════"
+          echo "  FILES CHANGED IN THIS PR"
+          echo "══════════════════════════════════════"
+          git diff --name-status origin/${{ github.base_ref }}...HEAD | while read status file; do
+            case "$status" in
+              A) echo "  ➕ $file (added)" ;;
+              M) echo "  ✏️  $file (modified)" ;;
+              D) echo "  🗑️  $file (deleted)" ;;
+              *) echo "  ❓ $file ($status)" ;;
+            esac
+          done
+
+          # Check for risky changes
+          RISKY=""
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | while read f; do
+            case "$f" in
+              config/engineering_data.yaml) echo "⚠️ SSOT config changed — physics revalidation needed" ;;
+              src/physics_validator.py) echo "⚠️ Physics engine changed — verify thermodynamic models" ;;
+              workspace_build.py) echo "⚠️ Build script changed — full rebuild needed" ;;
+            esac
+          done
+
+  # ──────────────────────────────────────────────
+  # JOB 4: Physics Regression
+  # ──────────────────────────────────────────────
+  physics-regression:
+    name: "🔬 Physics Regression"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install numpy pyyaml
+
+      - name: Run physics validation
+        run: |
+          python3 << 'EOF'
+          import yaml, sys
+          sys.path.insert(0, 'src')
+          from physics_validator import verify_mass_balance
+          with open('config/engineering_data.yaml') as f:
+              config = yaml.safe_load(f)
+          result = verify_mass_balance(config)
+          print("══════════════════════════════════════")
+          print("  PR PHYSICS REGRESSION CHECK")
+          print("══════════════════════════════════════")
+          print(f"  h_in:    {result['enthalpy_in_j_g']} J/g")
+          print(f"  h_out:   {result['enthalpy_out_j_g']} J/g")
+          print(f"  ṁ:       {result['calculated_mass_flow_kg_s']} kg/s")
+          print(f"  Status:  {result['system_verification_status']}")
+          print("══════════════════════════════════════")
+          assert result['system_verification_status'] in ('PASS', 'WARN_LIMIT')
+          assert result['calculated_mass_flow_kg_s'] > 0
+          print("✅ Physics regression passed")
+          EOF
+
+  # ──────────────────────────────────────────────
+  # JOB 5: PR Status Gate
+  # ──────────────────────────────────────────────
+  pr-gate:
+    name: "🚦 PR Gate"
+    runs-on: ubuntu-latest
+    needs: [pr-metadata, code-quality, diff-analysis, physics-regression]
+    if: always()
+    steps:
+      - name: Gate decision
+        run: |
+          echo "══════════════════════════════════════"
+          echo "  PR VALIDATION GATE"
+          echo "══════════════════════════════════════"
+          echo "  Metadata:   ${{ needs.pr-metadata.result }}"
+          echo "  Quality:    ${{ needs.code-quality.result }}"
+          echo "  Diff:       ${{ needs.diff-analysis.result }}"
+          echo "  Physics:    ${{ needs.physics-regression.result }}"
+          echo "══════════════════════════════════════"
+
+          BLOCK=0
+          # Metadata and quality are hard gates
+          [ "${{ needs.pr-metadata.result }}" != "success" ] && BLOCK=1
+          [ "${{ needs.code-quality.result }}" != "success" ] && BLOCK=1
+          [ "${{ needs.physics-regression.result }}" != "success" ] && BLOCK=1
+
+          if [ "$BLOCK" = "1" ]; then
+            echo "❌ PR blocked — fix required checks"
+            exit 1
+          fi
+          echo "✅ PR approved for merge"
