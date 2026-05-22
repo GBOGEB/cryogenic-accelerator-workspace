@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  statuses: write
 
 env:
   PYTHON_VERSION: '3.11'
