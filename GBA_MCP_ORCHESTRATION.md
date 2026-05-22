@@ -138,7 +138,7 @@ WORKFLOW_LINEAGE_TRACK = [
         ["GBA_LIN_002"],
         {"manifest": "_data/lineage_manifest.json"},
         {"schema_valid": True, "all_sha256_64chars": True},
-        {"cmd": "python3 -c \"import json; m=json.load(open('_data/lineage_manifest.json')); [assert len(a['sha256'])==64 for a in m.get('assets',[])]\"", "exit_code": 0}
+        {"cmd": "python3 -c \"import json; m=json.load(open('_data/lineage_manifest.json')); all(len(a['sha256'])==64 for a in m.get('assets',[])) or (_ for _ in ()).throw(AssertionError('Invalid sha256 length'))\"", "exit_code": 0}
     ),
     (
         "GBA_LIN_004",
