@@ -294,7 +294,7 @@ echo "=== CRYO (physics) ===" && cd /home/ubuntu/github_repos/cryogenic-accelera
 | `EXHIBIT_EXTRACTION_TUPLES.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 8 | 8 EXHIBIT extraction sequences |
 | `CROSS_CHAT_ORCHESTRATION.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 7 | ChatGPT ↔ ChatLLM handover |
 | `UBUNTU_MCP_SEQUENCES.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | — | Complete command sequences |
-| `GBOGEB_INTEGRATION_MANIFEST.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | — | Integration manifest |
+| `GBOGEB_INTEGRATION_MANIFEST.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 21 | Master manifest with Mermaid topology graph |
 
 **Total orchestration tuples in the 8-file PR document set:** 29 + 22 + 12 + 8 + 7 + 21 = **99 tuples**
 
