@@ -312,9 +312,11 @@ git clone https://github.com/GBOGEB/REPO.git 2>&1
 # 1. Verify repo exists
 curl -s "https://api.github.com/repos/GBOGEB/REPO" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('full_name','NOT FOUND'))"
 # 2. Refresh token
-# Use Git_Tool get_github_access_token
-# 3. Retry with fresh token
-git clone https://x-access-token:TOKEN@github.com/GBOGEB/REPO.git
+# Use Git_Tool get_github_access_token and store it in GITHUB_TOKEN
+# 3. Authenticate without embedding the token in the clone URL
+printf '%s' "$GITHUB_TOKEN" | gh auth login --with-token
+# 4. Retry clone with the normal HTTPS URL
+git clone https://github.com/GBOGEB/REPO.git
 ```
 
 ### E002 — Git Push Rejected (Workflows)
