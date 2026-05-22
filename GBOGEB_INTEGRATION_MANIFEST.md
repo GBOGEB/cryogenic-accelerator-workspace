@@ -73,7 +73,7 @@
             "env": {
                 "GBA_PATH": "/home/ubuntu/gbogeb_abacus",
                 "GBC_PATH": "/home/ubuntu/gbogeb_codex",
-                "CRYO_PATH": "/home/ubuntu",
+                "CRYO_PATH": "/home/ubuntu/github_repos/cryogenic-accelerator-workspace",
                 "TOPOLOGY_FILE": "/home/ubuntu/gbogeb_abacus/config/knowledge_topology.json"
             }
         }
@@ -266,7 +266,7 @@ graph TD
 echo "=== GBA (79 tests) ===" && cd /home/ubuntu/gbogeb_abacus && python3 -m pytest tests/ -q 2>&1 | tail -1
 echo "=== GBC (68 tests) ===" && cd /home/ubuntu/gbogeb_codex && python3 -m pytest tests/ -q 2>&1 | tail -1
 echo "=== MCP (51 tests) ===" && cd /home/ubuntu/gbogeb_mcp_server && python3 -m pytest tests/ -q 2>&1 | tail -1
-echo "=== CRYO (physics) ===" && cd /home/ubuntu && python3 -c "import yaml,sys;sys.path.insert(0,'src');from physics_validator import verify_mass_balance;c=yaml.safe_load(open('config/engineering_data.yaml'));r=verify_mass_balance(c);print(f'{r[\"system_verification_status\"]}') "
+echo "=== CRYO (physics) ===" && cd /home/ubuntu/github_repos/cryogenic-accelerator-workspace && python3 -c "import yaml,sys;sys.path.insert(0,'src');from physics_validator import verify_mass_balance;c=yaml.safe_load(open('config/engineering_data.yaml'));r=verify_mass_balance(c);print(f'{r[\"system_verification_status\"]}') "
 ```
 
 ---
@@ -283,21 +283,22 @@ echo "=== CRYO (physics) ===" && cd /home/ubuntu && python3 -c "import yaml,sys;
 
 ---
 
-## 6. Orchestration Documents
+## 6. PR Document Set (8 Files)
 
 | Document | Location | Tuples | Purpose |
 |----------|----------|--------|---------|
-| `MCP_ORCHESTRATION_FRAMEWORK.md` | `/home/ubuntu/` | 21 | Cryogenic workspace orchestration |
-| `GBA_MCP_ORCHESTRATION.md` | `/home/ubuntu/` | 29 | GBA governance pipeline orchestration |
-| `GBC_MCP_ORCHESTRATION.md` | `/home/ubuntu/` | 22 | GBC asset pipeline orchestration |
-| `CROSS_REPO_MCP_BRIDGE.md` | `/home/ubuntu/` | 8+4 | GBA ↔ GBC bridge coordination |
-| `DOCUMENT_ORG_INTEGRATION_PLAN.md` | `/home/ubuntu/` | — | DOS integration roadmap |
-| `EXHIBIT_EXTRACTION_TUPLES.md` | `/home/ubuntu/` | 8 | 8 EXHIBIT extraction sequences |
-| `CROSS_CHAT_ORCHESTRATION.md` | `/home/ubuntu/` | 7 | ChatGPT ↔ ChatLLM handover |
-| `UBUNTU_MCP_SEQUENCES.md` | `/home/ubuntu/` | — | Complete command sequences |
-| **This file** | `/home/ubuntu/` | — | Integration manifest |
+| `GBA_MCP_ORCHESTRATION.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 29 | GBA governance pipeline orchestration |
+| `GBC_MCP_ORCHESTRATION.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 22 | GBC asset pipeline orchestration |
+| `CROSS_REPO_MCP_BRIDGE.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 8+4 | GBA ↔ GBC bridge coordination |
+| `DOCUMENT_ORG_INTEGRATION_PLAN.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | — | DOS integration roadmap |
+| `EXHIBIT_EXTRACTION_TUPLES.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 8 | 8 EXHIBIT extraction sequences |
+| `CROSS_CHAT_ORCHESTRATION.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | 7 | ChatGPT ↔ ChatLLM handover |
+| `UBUNTU_MCP_SEQUENCES.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | — | Complete command sequences |
+| `GBOGEB_INTEGRATION_MANIFEST.md` | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace/` | — | Integration manifest |
 
-**Total orchestration tuples:** 21 + 29 + 22 + 12 + 8 + 7 = **99 tuples**
+**Total orchestration tuples in the 8-file PR document set:** 29 + 22 + 12 + 8 + 7 + 21 = **99 tuples**
+
+**Related reference (not counted above):** `MCP_ORCHESTRATION_FRAMEWORK.md` — pre-existing cryogenic workspace orchestration reference.
 
 ---
 
@@ -312,7 +313,7 @@ echo "=== CRYO (physics) ===" && cd /home/ubuntu && python3 -c "import yaml,sys;
 │  NODES:  35 total (20 GBA + 7 GBC + 8 DOS)                    │
 │  EDGES:  16 cross-repo (6 existing + 10 planned)               │
 │  TESTS:  198 total across 8 test suites                        │
-│  TUPLES: 99 orchestration tuples across 9 documents            │
+│  TUPLES: 99 orchestration tuples across 8 PR documents         │
 │                                                                │
 │  CI/CD:  CRYO: 6 workflows (test/build/deploy/release/PR/nightly)│
 │          GBA:  3 workflows (governance/assets/deploy)          │
@@ -325,6 +326,6 @@ echo "=== CRYO (physics) ===" && cd /home/ubuntu && python3 -c "import yaml,sys;
 │  MCP TOOLS: 8 (navigate, validate, sync, lineage, route, ...)│
 │  STAKEHOLDERS: [KEB] Executive · [DOW] Technical · [ALL]      │
 │                                                                │
-│  ORCHESTRATION DOCS: 9 files · 99 tuples · 4 repos            │
+│  ORCHESTRATION DOCS: 8 PR files · 99 tuples · 4 repos         │
 └────────────────────────────────────────────────────────────────┘
 ```

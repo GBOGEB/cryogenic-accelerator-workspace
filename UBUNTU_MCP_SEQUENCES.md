@@ -67,6 +67,7 @@ git config --global user.email  # Expected: gbogeb@users.noreply.github.com
 ```bash
 # ── Sequence: CONFIG_VALIDATE_YAML ──
 cd /home/ubuntu/gbogeb_abacus
+pip install pyyaml -q
 
 python3 << 'EOF'
 import yaml, glob, sys
