@@ -194,7 +194,7 @@ python3 -m pytest tests/ -q 2>&1 | tail -1
 
 ```bash
 # ── Sequence: TEST_EXEC_CRYO ──
-cd /home/ubuntu
+cd /home/ubuntu/github_repos/cryogenic-accelerator-workspace
 pip install numpy pyyaml -q
 
 # Physics validation
