@@ -15,7 +15,7 @@
 |---|-----------|-------|------|-------|---------------|--------|
 | 1 | `GBOGEB/ABACUS` | GBA | `/home/ubuntu/gbogeb_abacus` | 79 | 20 | ✅ Active |
 | 2 | `GBOGEB/CODEX` | GBC | `/home/ubuntu/gbogeb_codex` | 68 | 7 | ✅ Active |
-| 3 | `GBOGEB/cryogenic-accelerator-workspace` | CRYO | `/home/ubuntu` | — | — | ✅ Active |
+| 3 | `GBOGEB/cryogenic-accelerator-workspace` | CRYO | `/home/ubuntu/github_repos/cryogenic-accelerator-workspace` | — | — | ✅ Active |
 | 4 | `GBOGEB/document-organization-system` | DOS | (remote) | — | 8 (planned) | 📋 Analysis |
 | 5 | `GBOGEB/gbogeb-mcp-server` | MCP | `/home/ubuntu/gbogeb_mcp_server` | 51 | — | ✅ Active |
 
