@@ -1,0 +1,34 @@
+name: TRIAGE bridge census
+on:
+  pull_request:
+    paths:
+      - 'scripts/triage_bridge_census.py'
+      - 'triage/**'
+      - '*.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build discovery census
+        run: python scripts/triage_bridge_census.py > triage_bridge_census.json
+      - name: Validate bounded receipt
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('triage_bridge_census.json'))
+          assert d['authority']=='DISCOVERY_ONLY'
+          assert d['release_credit'] is False
+          assert d['document_count'] >= 5
+          print('PASS', d['document_count'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: triage-bridge-census
+          path: triage_bridge_census.json
