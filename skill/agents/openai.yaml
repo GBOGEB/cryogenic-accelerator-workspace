@@ -1,0 +1,3 @@
+interface:
+  display_name: "Cryogenic Accelerator Level 1"
+  short_description: "Census, MIP and governed physics worker orchestration"
