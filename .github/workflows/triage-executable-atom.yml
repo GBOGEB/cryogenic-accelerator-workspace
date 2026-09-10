@@ -1,0 +1,20 @@
+name: TRIAGE executable atom contract
+on:
+  pull_request:
+    paths:
+      - 'triage/EXECUTABLE_ATOM_CONTRACT_W02.yaml'
+      - 'scripts/validate_executable_atom_contract.py'
+      - '.github/workflows/triage-executable-atom.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pyyaml
+      - run: python scripts/validate_executable_atom_contract.py

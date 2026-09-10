@@ -1,0 +1,47 @@
+schema: accelerator-executable-atom-contract/v0.1
+status: CONTROLLED_IMPLEMENTATION_CANDIDATE
+source_design: EXHIBIT_EXTRACTION_TUPLES.md
+selected_atom:
+  id: EXHIBIT-4-RTM-TRACEABILITY
+  design_label: Requirements Traceability Matrix
+  target_owner: GBOGEB/ABACUS
+  target_role: requirements_traceability_validation
+  authority_effect: NONE
+
+modernization:
+  rejected_legacy_behaviour:
+    - embedded_hardcoded_requirement_to_test_mapping
+    - echo_only_success_receipts
+    - clone_then_mutate_target_without_exact_source_identity
+    - missing_or_stub_module_treated_as_success
+  executable_contract:
+    required_inputs:
+      - source_manifest
+      - source_sha256
+      - target_manifest
+      - target_sha
+      - mapping_rows
+    mapping_row_required_fields:
+      - source_requirement_id
+      - source_requirement_sha256
+      - target_artifact
+      - target_test_or_evidence
+      - relation_type
+      - disposition
+    allowed_dispositions: [ACCEPT, REJECT, DEFER]
+    prohibited:
+      - invent_mapping_when_source_missing
+      - hardcode_live_QPS_requirement_values
+      - promote_document_example_to_authority
+      - success_on_missing_target
+    receipt:
+      authority: EVIDENCE_ONLY
+      release_credit: false
+      compliance_credit: false
+      exact_source_and_target_required: true
+
+next_receiver_gate:
+  repo: GBOGEB/ABACUS
+  requirement: >-
+    Receiver must consume a machine-readable mapping payload and independently validate source/target hashes
+    before any local integration. This satellite contract itself creates no ABACUS/QPS authority.
