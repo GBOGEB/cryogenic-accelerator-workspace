@@ -1,0 +1,15 @@
+{
+  "schema": "gbogeb-level1-ssot/v1",
+  "repo": "GBOGEB/cryogenic-accelerator-workspace",
+  "role": "BRIDGE_RTM_PHYSICS_WORKER",
+  "default_branch": "main",
+  "existing_runtime_refs": ["config/engineering_data.yaml", "src/physics_validator.py", "workspace_build.py"],
+  "inputs": ["engineering configuration", "RTM/bridge inputs", "physics validation requests"],
+  "outputs": ["physics validation results", "regenerated workspace artifacts", "exact-SHA/source/output receipts"],
+  "authority": {
+    "may": ["validate local engineering configuration", "execute independent physics checks", "emit deterministic receipts"],
+    "must_not": ["self-promote QPS contract truth", "promote bidder compliance", "override cryoplant child disposition"]
+  },
+  "federation_targets": ["GBOGEB/pipeline-automation-hub", "GBOGEB/CODEX", "GBOGEB/ABACUS", "GBOGEB/cryoplant-project"],
+  "status": "PC1_CONTROL_PLANE"
+}
