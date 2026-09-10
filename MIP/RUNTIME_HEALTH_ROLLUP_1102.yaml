@@ -1,0 +1,9 @@
+schema_version: "0.1"
+rollup_id: ABACUS-1102-RUNTIME-HEALTH
+seed: {repo: GBOGEB/ABACUS, pr: 1102, merge_sha: 8841dc701a1896233273413c81d7c88d268b9498}
+active_window: 24h
+role: SATELLITE_BRIDGE_RTM_WORKER
+runtime_health_relevance: [RUNNERS, MCP, DEBUG_TELEMETRY]
+may_produce: [bridge_execution_receipt, source_target_digest, runner_health]
+may_not_produce: [QPS_ENGINEERING_AUTHORITY, COMPLIANCE_PROMOTION]
+next_victory: execute bridge_RTM contract on fresh exact head and emit source_target digests plus runtime receipt
