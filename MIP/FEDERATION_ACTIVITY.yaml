@@ -1,0 +1,49 @@
+schema: gbogeb-federation-activity/1.0.0
+as_of: '2026-09-10T06:46:00+02:00'
+repo: GBOGEB/cryogenic-accelerator-workspace
+classification: SATELLITE_ACTIVE
+federation_role: ACCELERATOR_RTM_BRIDGE_AND_TECHNICAL_WORKSPACE
+last_pr: 6
+last_wave: MIP_ROLLOUT
+open_pr_count_observed: 1
+recent_activity:
+  - {pr: 4, state: MERGED_OR_RECENT, role: executable_bridge_census}
+  - {pr: 5, state: MERGED_OR_RECENT, role: executable_rtm_atom_contract}
+  - {pr: 6, state: OPEN, role: mip_rollout_and_federation_index}
+mip_state:
+  modernize: ACTIVE
+  innovate: GATED_ON_EXECUTION_PROOF
+  perpetuate: WITHHELD
+three_p_capability:
+  P1_source_atom: true
+  P2_integration_graph: true
+  P3_evidence_control: partial
+runtime_proof:
+  state: PARTIAL
+  evidence: deterministic bridge census and executable RTM contract exist
+source_authority:
+  state: EVIDENCE_ONLY_SATELLITE
+  may_override_qps_child: false
+produces_receipts:
+  - bridge_census_receipt
+  - rtm_atom_contract_receipt
+consumes_receipts:
+  - qps_mapping_acceptance
+  - parent_semantic_validation
+current_blocker: repeatable executable build/runtime proof with exact-head receipt
+next_victory: >-
+  Execute the current bridge/RTM contract on a fresh exact head, emit a machine-readable
+  receipt with source/target digests, and return it through the federation without
+  claiming QPS authority or release credit.
+federation_dependencies:
+  upstream:
+    - GBOGEB/cryoplant-project
+    - GBOGEB/CODEX
+  downstream:
+    - GBOGEB/ABACUS
+    - GBOGEB/pipeline-automation-hub
+controls:
+  authority_effect: NONE
+  engineering_credit: false
+  compliance_credit: false
+  release_credit: false
