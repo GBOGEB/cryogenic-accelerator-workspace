@@ -1,0 +1,14 @@
+schema: gbogeb-mesh-dock/1.0
+repo: GBOGEB/cryogenic-accelerator-workspace
+node_id: repo.cryo_workspace
+ring: R1_ACTIVE_EXECUTION
+role: BRIDGE_RTM_PHYSICS_WORKER
+local_ssot: {primary: level1/ssot.json, engineering: config/engineering_data.yaml, topology: config/knowledge_topology.json}
+global_directory: {repo: GBOGEB/CODEX, census: federation/mesh/GLOBAL_HIVE_CENSUS_v1.yaml, action_taxonomy: federation/mesh/GLOBAL_ACTION_TAXONOMY_v1.yaml}
+authority:
+  may: [validate_local_engineering_configuration, execute_independent_physics_checks, emit_deterministic_receipts]
+  must_not: [self_promote_QPS_contract_truth, promote_bidder_compliance, override_child_disposition]
+inputs: [engineering_configuration, RTM_bridge_inputs, physics_validation_requests]
+outputs: [physics_validation_results, regenerated_workspace_artifacts, exact_SHA_source_output_receipts]
+action_classes: [PB, QH, FE, RR, BG]
+first_use_case: independently validate a cryogenic/accelerator property and bind it to an RTM bridge receipt
