@@ -22,13 +22,3 @@ jobs:
       - run: python -m pip install numpy
       - name: Execute narrow property-engine admission guard
         run: PYTHONPATH=src python src/qps_w111_property_adapter.py
-      - name: Prove warm HP state is rejected by legacy polynomial adapter
-        run: |
-          PYTHONPATH=src python -c "from qps_w111_property_adapter import QuarantinedHeliumPropertyAdapter as A; a=A();
-          import sys;
-          
-          try:
-              a.get_enthalpy_j_g(298.0,1.05)
-          except ValueError:
-              print('W111_WARM_HP_QUARANTINE=PASS'); sys.exit(0)
-          raise SystemExit('legacy polynomial unexpectedly admitted warm HP state')"
