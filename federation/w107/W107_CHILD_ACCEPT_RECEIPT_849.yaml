@@ -8,4 +8,4 @@ runtime_health: {domain: LLDB_DAP_SWIFT_DOCKER_RUNNERS_MCP, probe: ACCEPT, dov: 
 satellite_disposition: CONSUME_ACCEPTED_RUNTIME_HEALTH_RECEIPT
 capability_boundary: accelerator_bridge_RTM_evidence_worker
 next_proof: fresh_exact_head_bridge_execution_with_source_target_digests
- guards: []
+guards: [no_QPS_engineering_authority_transfer, no_compliance_or_negotiation_credit, bridge_does_not_self_promote_QPS_authority]
