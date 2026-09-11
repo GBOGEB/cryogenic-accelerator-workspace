@@ -1,0 +1,84 @@
+schema_version: cryogenic-workspace-qps-thermo-admission/0.1
+wave: W111
+status: EXPERIMENTAL_CROSSCHECK_QUARANTINED
+repo: GBOGEB/cryogenic-accelerator-workspace
+authority_scope: COMPATIBILITY_REFERENCE
+engineering_promotion_forbidden: true
+
+qps_child_authority:
+  repo: GBOGEB/cryoplant-project
+  source_ssot: ocd-adr/20_canonical/control/QPS_W111_POWER_UTILITY_SOURCE_SSOT_v1.json
+  source_ssot_git_blob_sha: d19975a150a3530cc4db3bd2fbbf4180f757c2a4
+
+observed_existing_capability:
+  ssot: config/engineering_data.yaml
+  physics_engine: src/physics_validator.py
+  build: workspace_build.py
+  hmi: [web/index.html, web/app.html]
+  current_engine_characterization:
+    type: PROJECT_LOCAL_POLYNOMIAL_APPROXIMATION
+    intended_temperature_context_K: [4.0, 10.0]
+    current_pressure_parameter_used_in_polynomial: false
+    current_QPS_authority: NONE
+    guard: >-
+      Existing comments mentioning NIST Standard Reference Database 23 and HEPAK shall not be interpreted as proof that this
+      implementation is REFPROP, HEPAK, or a validated reproduction of either. Exact provenance and fit validation remain open.
+
+admission_boundary:
+  allowed_now:
+    - workflow_and_interface_pattern_reuse
+    - sanitized_low_temperature_test_fixture
+    - independent_algorithm_structure_review
+    - visualization_and_workspace_build_pattern
+  prohibited_now:
+    - HP_298K_1p05_to_14bara_calculation
+    - PVPS_warm_compression_calculation
+    - QPS_acceptance_or_compliance_evidence
+    - HEPAK_or_REFPROP_identity_claim
+    - replacing_CoolProp_or_HEPAK_receipts
+    - extrapolation_outside_explicit_fit_domain
+
+N_version_role:
+  tier: EXPERIMENTAL_N3
+  N1: governed_QPS_child_calculation_or_HEPAK_when_available
+  N2: CoolProp_exact_revision_receipt
+  N3: cryogenic_accelerator_workspace_local_approximation_after_cross_validation
+  promotion_gate: >-
+    Define exact source data and fit error, verify pressure dependence or formally constrain pressure, reproduce at least
+    ten independent state points against an accepted reference, publish residuals/tolerance, then seek child admission.
+
+cross_pollination:
+  import_from_QPS_mesh:
+    - source_pointer_and_digest_discipline
+    - evidence_class
+    - no_unknown_zero_fill
+    - child_only_promotion
+  export_to_QPS_mesh:
+    - SSOT_to_physics_to_HMI_regeneration_pattern
+    - workspace_bundle_and_manifest_pattern
+    - visual_validation_surface
+  consumer: GBOGEB/ABACUS
+  semantic_route: GBOGEB/CODEX
+  no_short_circuit: true
+
+first_red_findings:
+  - id: CW-W111-01
+    finding: property_engine_pressure_argument_is_not_used_by_existing_polynomial
+    consequence: do_not_use_as_general_P_T_helium_property_engine
+    disposition: QUARANTINE_GENERAL_THERMO_USE
+  - id: CW-W111-02
+    finding: source_comment_conflates_NIST_SRD23_and_HEPAK_identity
+    consequence: provenance_must_be_recovered_before_property_authority_claim
+    disposition: RETAIN_AS_UNVERIFIED_PROVENANCE
+
+DoD:
+  admission_contract: true
+  executable_guard: PENDING
+  CI: PENDING
+  cross_reference_from_child: PENDING
+
+DoV:
+  current: WITHHELD
+  victory: >-
+    The repo can participate as an experimental N-version crosscheck without allowing its legacy polynomial to contaminate
+    warm-compressor calculations or authoritative QPS thermophysical evidence.
