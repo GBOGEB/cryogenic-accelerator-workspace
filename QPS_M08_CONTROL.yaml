@@ -1,0 +1,68 @@
+schema: qps.m08.control.v1
+mission: M08_CRYOGENIC_ACCELERATOR_WORKSPACE
+state: DOV1_QUARANTINE_CONTROL
+merge_sha: 7d81c7529822f3dd59aad08869ca9782c0fccd97
+runtime:
+  run_id: 34686000829
+  job_id: 103532987417
+  runner_id: 1000253114
+  source_head: 85c4a6c0c930cd4af94f6abfb4b3062a70456134
+  conclusion: SUCCESS
+  exact_head_checkout: PASS
+  exact_head_assert: PASS
+  widened_custom_envelope_rejected: true
+  narrower_custom_envelope_allowed: true
+  warm_298K_use_rejected: true
+  dimensional_guard: PASS_GUARD_BLOCKS_PROMOTION
+
+closed_control_defects:
+  - PR15_P1_custom_envelope_quarantine_escape
+  - PR15_P2_underlying_engine_change_not_triggering_admission_CI
+
+new_controlled_findings:
+  - id: CW-W111-03
+    finding: mixed_W_per_m_and_W_heat_loads
+    state: FAIL_CLOSED_REQUIRES_LENGTH_OR_TOTAL_STATIC_LOAD
+  - id: CW-W111-04
+    finding: legacy_mass_flow_label_kg_per_s_but_dimensional_result_g_per_s
+    state: FAIL_CLOSED_REQUIRES_EXPLICIT_UNIT_CONTRACT
+
+value_disposition:
+  useful_exports:
+    - SSOT_to_physics_to_HMI_regeneration_pattern
+    - workspace_bundle_and_manifest_pattern
+    - experimental_N_version_guard_pattern
+  quarantined:
+    - local_polynomial_as_engineering_property_authority
+    - legacy_verify_mass_balance_as_QPS_acceptance_evidence
+  current_role: EXPERIMENTAL_N3_COMPATIBILITY_REFERENCE
+
+management:
+  PM_DOW: CONTRACT_AFTER_BOUNDED_REPAIR
+  TM_KEB: ACCEPT_CONTROL_DOV1_KEEP_TECHNICAL_AUTHORITY_HOLD
+  Analyst:
+    DMAIC: CONTROL_QUARANTINE
+    BT_next: source_bound_geometry_and_property_reference_only_if_external_evidence_arrives
+    PCA: retain_as_measured_fast_control_iteration
+  QA: ACCEPT_EXACT_HEAD_DUAL_GUARD
+  Governor: HOLD_PROPERTY_AND_MASS_BALANCE_PROMOTION
+
+crew_transition:
+  returning: [Doctor, Dockmaster, Smoker, QA]
+  small_control_cell: [Scientist, TM_KEB, Governor]
+  Engineer: RETURN_TO_PORTFOLIO
+
+DoD: PASS
+DoV:
+  DoV_1: PASS_QUARANTINE_CONTROL_ONLY
+  DoV_2: WITHHELD_REQUIRES_INDEPENDENT_REFERENCE_RESIDUAL_GRID_AND_DIMENSIONAL_INPUT_CLOSURE
+  DoV_3: WITHHELD
+
+BG_retired:
+  - BG_M08_CUSTOM_ENVELOPE_QUARANTINE_ESCAPE
+  - BG_M08_CI_DEPENDENCY_BLIND_SPOT
+BG_remaining:
+  - BG_M08_UNVERIFIED_PROPERTY_PROVENANCE
+  - BG_M08_MIXED_HEAT_LOAD_DIMENSIONS
+  - BG_M08_MASS_FLOW_UNIT_CONTRACT
+next_CG: RETURN_GENERALIST_CREW_WAIT_FOR_SOURCE_BOUND_TECHNICAL_INPUT
