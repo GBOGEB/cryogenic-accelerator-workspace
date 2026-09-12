@@ -1,0 +1,28 @@
+wave: W70
+program: MIP_AUTHORITY_RECONCILIATION
+repository: GBOGEB/cryogenic-accelerator-workspace
+role: engineering_validation_worker
+modernize:
+  - inventory engineering_data.yaml, knowledge_topology.json, physics_validator.py and generated web outputs
+  - classify every engineering value/node against cryoplant-project as SAME, DERIVED, STALE, CONFLICTING or UNIQUE_CANDIDATE
+  - prevent local workspace data from silently becoming competing authority
+innovate:
+  - expose validation results as typed graph edges with source_sha, source_path, method and result_digest
+  - emit a reconciliation receipt consumable by CODEX and ABACUS
+  - allow reverse-loading only for UNIQUE_CANDIDATE or CONFLICTING items with explicit source challenge
+perpetuate:
+  - rerun reconciliation on workspace SSOT or validator change
+  - retain prior classification counts and net delta
+  - recurse on first CONFLICTING high-centrality node
+outputs:
+  - authority_reconciliation.json
+  - validation_receipt.json
+  - topology_delta.json
+victory:
+  - all local SSOT nodes classified against cryoplant authority
+  - one real physics validation executes >0 assertions
+  - exact-SHA receipt has no unclassified authority-bearing values
+claim_guards:
+  - WORKSPACE_NE_CRYOPLANT_AUTHORITY
+  - DERIVED_NE_SOURCE
+  - VALIDATOR_PASS_NE_ENGINEERING_ACCEPTANCE
