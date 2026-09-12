@@ -1,0 +1,85 @@
+schema_version: cryogenic-workspace-qps-m08-w111-repair/0.1
+mission: M08_CRYOGENIC_ACCELERATOR_WORKSPACE
+inherits:
+  wave: W111
+  admission_contract: triage/W111_QPS_THERMO_CROSSCHECK_ADMISSION.yaml
+  merged_parent: 252cfbd3a6cb417d3f0c982fd8f009231cffae06
+state: REPAIR_AND_QUARANTINE_VALIDATION
+
+purpose: >-
+  Consume the existing W111 quarantine rather than restart reconnaissance. Close the
+  two unaddressed review defects and expose two additional dimensional first-reds
+  in the legacy mass-balance helper without inventing missing engineering inputs.
+
+inherited_green:
+  - local_polynomial_is_not_HEPAK_or_REFPROP_authority
+  - pressure_argument_nonuse_is_known
+  - warm_compressor_use_is_prohibited
+  - experimental_N3_role_only
+  - child_only_engineering_promotion
+
+repair_set:
+  - id: M08-R01
+    source: PR15_review_P1
+    defect: caller_can_widen_custom_AdmissionEnvelope_beyond_4_to_10K_and_0p95_to_1p05bar
+    repair: adapter_rejects_any_envelope_wider_than_fixed_quarantine_but_allows_narrower_subsets
+    owner: Doctor
+  - id: M08-R02
+    source: PR15_review_P2
+    defect: admission_CI_did_not_trigger_when_underlying_physics_validator_changed
+    repair: add_physics_validator_and_engineering_data_and_mass_guard_to_trigger_surface
+    owner: Dockmaster
+  - id: M08-R03
+    source: direct_code_dimensional_audit
+    defect: cryomodule_static_loss_W_per_m_is_added_to_dynamic_rf_load_W_without_bound_length
+    repair: fail_closed_guard_requires_length_or_total_static_heat_load_source
+    owner: Scientist
+  - id: M08-R04
+    source: direct_code_dimensional_audit
+    defect: W_divided_by_J_per_g_has_g_per_s_dimension_but_legacy_return_field_is_labelled_kg_per_s
+    repair: fail_closed_guard_blocks_promotion_until_explicit_unit_contract_is repaired
+    owner: Scientist
+
+non_actions:
+  - do_not_assume_cryomodule_length_equals_1m
+  - do_not_apply_silent_1000x_conversion
+  - do_not_relabel_legacy_PASS_as_QPS_acceptance
+  - do_not_replace_legacy_engine_with_CoolProp_or_HEPAK_without_governed_source_contract
+
+crew:
+  PM_DOW: STAY_BOUNDED_REPAIR_PULSE
+  TM_KEB: HOLD_ENGINEERING_AUTHORITY
+  Analyst: [DMAIC, BT]
+  active: [Doctor, Dockmaster, Scientist, Smoker, QA]
+  reserve: [Engineer, Ambassador]
+
+DMAIC:
+  Define: preserve_experimental_crosscheck_while_preventing_quarantine_escape_and_unit_false_green
+  Measure: four_concrete_defects_bound_two_review_two_dimensional
+  Analyze: dominant_risk_is_false_admission_not_missing_feature_breadth
+  Improve: hard_envelope_plus_exact_head_CI_plus_dimensional_guard
+  Control: current_head_guard_must_execute_and_PASS_before_contracting_crew
+
+BT:
+  rank_1: custom_envelope_quarantine_escape
+  rank_2: CI_dependency_blind_spot
+  rank_3: mixed_W_per_m_plus_W_mass_balance
+  rank_4: g_per_s_vs_kg_per_s_label
+
+DoD:
+  consume_W111_lineage: PASS
+  close_PR15_P1: IMPLEMENTED_PENDING_RUNTIME
+  close_PR15_P2: IMPLEMENTED_PENDING_RUNTIME
+  dimensional_guard: IMPLEMENTED_PENDING_RUNTIME
+  exact_head_execution: PENDING
+  QA_receipt: PENDING
+
+DoV:
+  DoV_1: >-
+    PASS only when exact-head CI executes both quarantine guards and proves the
+    unsafe paths are blocked. This is safety/control value, not property accuracy.
+  DoV_2: WITHHELD_REQUIRES_INDEPENDENT_REFERENCE_RESIDUAL_GRID
+  DoV_3: WITHHELD
+
+BG: BG_M08_QUARANTINE_ESCAPE_AND_DIMENSIONAL_FALSE_GREEN
+CG: CG_M08_EXACT_HEAD_DUAL_GUARD_PASS_THEN_CONTRACT
