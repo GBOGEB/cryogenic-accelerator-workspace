@@ -1,0 +1,11 @@
+# W1_DELETE_MERGED (9 branches, mode delete). Census 2026-10-11 against main.
+# Every commit is on main, or a merged PR has this exact head (kept under refs/pull/N/head).
+control/m08-dov1-quarantine	29199e7385394df20e59bcf94729826f68af7bd3	delete
+m08/w111-quarantine-repair	85c4a6c0c930cd4af94f6abfb4b3062a70456134	delete
+mip/2026-09-10-rollout	df1d575fe775b043ef4925e3d9b5ea65dcd85407	delete
+mip/l1-pc1-control	c111082bcb4880d3fce7878b5878de2c26ab18ca	delete
+mip/l1-pc2-runtime	12ead9b4de11bb7a3cf59cbb5e9c84bf744319ff	delete
+mip/l1-pc3-level1	1f2113e8708916ebf9b8b389579ba41c48365c7c	delete
+triage/pca-r5-executable-atom-w02	2bbc51622cbb42bf707e3a5a94bedfd7ee2f1790	delete
+w107/p6-bridge-runtime-proof	4341ce9aa560935ff51e3eb9ccc411d57d7ec29b	delete
+wave/w107-rollup-1102	76fc692e8452b46679474ce2561945ef81e994b6	delete
