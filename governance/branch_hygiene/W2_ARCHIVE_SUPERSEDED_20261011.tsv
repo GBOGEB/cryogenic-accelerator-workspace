@@ -1,0 +1,4 @@
+# W2_ARCHIVE_SUPERSEDED (2 branches, mode archive). Census 2026-10-11 against main.
+# Changed files already identical on main, docs/evidence snapshots, or unrelated history. Tagged archive/<branch> first.
+ci/environment-tracking	8472b99a67be6b16831b5750d3f40d8a1d5ad7de	archive
+feat/mcp-orchestration-suite	b38653643b46065464d5dac658fe723016c0e486	archive
