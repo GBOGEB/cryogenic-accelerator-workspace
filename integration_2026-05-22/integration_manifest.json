@@ -1,0 +1,152 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-10-25T18:20:00Z",
+  "session": "2026-05-22",
+  "title": "MCP Orchestration & Governance Framework — multi-repo integration",
+  "owner": "GBOGEB",
+  "replaces": {
+    "approach": "orphan-branch (unrelated history)",
+    "orphan_branch": "feat/mcp-orchestration-session-2026-05-22-noworkflows",
+    "orphan_branch_repo": "GBOGEB/ABACUS",
+    "orphan_branch_mergeable": false,
+    "orphan_branch_action": "superseded, kept (not deleted)"
+  },
+  "repos": [
+    {
+      "name": "GBOGEB/ABACUS",
+      "role": "runtime_plane",
+      "access": "admin",
+      "default_branch": "main",
+      "head_at_clone": "8d27bca8",
+      "tracked_files": 4154,
+      "commits": 7574,
+      "workflows": 161,
+      "language": "Python",
+      "test_framework": "pytest",
+      "upstream_tests_collected": 2357,
+      "upstream_collection_errors": 3,
+      "upstream_full_run": "not_completed_sandbox_dep_limits",
+      "integration": {
+        "branch": "integrate/session-2026-05-22-governance",
+        "base": "main",
+        "commit_sha": "09e5d738b4e0ec9bd389e196dab854d5e1f0a821",
+        "namespace": "integration/gbogeb_session/",
+        "pr_number": 2433,
+        "pr_url": "https://github.com/GBOGEB/ABACUS/pull/2433",
+        "pr_state": "open",
+        "mergeable": true,
+        "mergeable_state": "unstable",
+        "changed_files": 107,
+        "additions": 16694,
+        "session_tests_in_tree": {
+          "governance": {"passed": 79, "total": 79},
+          "mcp_server": {"passed": 51, "total": 51},
+          "federation_smoke": {"passed": 2, "total": 2}
+        },
+        "components": ["governance_engines", "mcp_server", "orchestration_docs", "handover_suite", "ci_workflows_reference_txt"]
+      }
+    },
+    {
+      "name": "GBOGEB/CODEX",
+      "role": "governance_plane_supplemental",
+      "access": "admin",
+      "default_branch": "main",
+      "head_at_clone": "dca0e79e",
+      "tracked_files": 2779,
+      "commits": 6492,
+      "workflows": 148,
+      "language": "Python",
+      "test_framework": "pytest",
+      "upstream_collection_errors": 8,
+      "upstream_full_run": "not_completed_sandbox_dep_limits",
+      "integration": {
+        "branch": "integrate/session-2026-05-22-assets",
+        "base": "main",
+        "commit_sha": "66d9644ccc0fd41d5da88917837bd4e6775c772f",
+        "namespace": "integrations/gbogeb_session/",
+        "pr_number": 1189,
+        "pr_url": "https://github.com/GBOGEB/CODEX/pull/1189",
+        "pr_state": "open",
+        "mergeable": true,
+        "mergeable_state": "unstable",
+        "changed_files": 45,
+        "additions": 6706,
+        "session_tests_in_tree": {
+          "assets_governance": {"passed": 68, "total": 68}
+        },
+        "components": ["asset_validator", "svg_cleaner", "lineage_tracker", "engineering_svgs", "gbc_orchestration_docs", "ci_workflows_reference_txt"],
+        "role_boundary_respected": "CODEX stays supplemental, not runtime SSOT"
+      }
+    },
+    {
+      "name": "GBOGEB/cryoplant-project",
+      "role": "auxiliary_plane",
+      "private": true,
+      "access": "admin",
+      "default_branch": "main",
+      "head_at_clone": "321d751a",
+      "tracked_files": 7741,
+      "commits": 8133,
+      "workflows": 150,
+      "language": "HTML",
+      "test_framework": "pytest",
+      "integration": {
+        "branch": "integrate/session-2026-05-22-hooks",
+        "base": "main",
+        "commit_sha": "ad1efef54f129e9e2c97f2bdd812b4a0604904ef",
+        "namespace": "federation/gbogeb_session/",
+        "pr_number": 2085,
+        "pr_url": "https://github.com/GBOGEB/cryoplant-project/pull/2085",
+        "pr_state": "open",
+        "mergeable": true,
+        "mergeable_state": "unstable",
+        "changed_files": 2,
+        "additions": 59,
+        "kind": "cross_repo_registration_pointer_only",
+        "mutates_authoritative_manifest": false
+      }
+    },
+    {
+      "name": "GBOGEB/document-organization-system",
+      "role": "canonical_document_runtime_reference",
+      "access": "read_only_reference",
+      "default_branch": "main",
+      "head_at_clone": "6f27f7e",
+      "tracked_files": 285,
+      "commits": 353,
+      "workflows": 7,
+      "language": "Python",
+      "integration": null,
+      "prune_candidates_not_acted": [
+        "duplicated root scripts vs Automation/Scripts/",
+        "git_integration.py embeds PAT in URL",
+        "tracked SQLite .db cache files",
+        "stale CHANGELOG v0.4.9 placeholders",
+        "GIT_TRACKING_MANIFEST.md 0.4.7 vs 0.4.9 drift"
+      ]
+    }
+  ],
+  "mcp_server_placement": {
+    "chosen": "GBOGEB/ABACUS",
+    "path": "integration/gbogeb_session/mcp_server/",
+    "justification": "ABACUS is the runtime_plane and centralizes cross-repo integration stubs; keeps handover atomic"
+  },
+  "topology": {
+    "governance_plane": "GBOGEB/CODEX",
+    "runtime_plane": "GBOGEB/ABACUS",
+    "auxiliary_plane": "GBOGEB/cryoplant-project",
+    "document_runtime_reference": "GBOGEB/document-organization-system",
+    "hub": "GBOGEB/cryogenic-accelerator-workspace"
+  },
+  "blockers": [
+    "CI workflow activation requires a user PAT with 'workflow' scope (GitHub App token cannot write .github/workflows/) — staged as *.yml.txt",
+    "Upstream full test suites not run to completion in sandbox (pre-existing missing-dependency collection errors)"
+  ],
+  "deliverables": [
+    "/home/ubuntu/gbogeb_integration/INTEGRATION_REPORT.md",
+    "/home/ubuntu/gbogeb_integration/windows_sync.ps1",
+    "/home/ubuntu/gbogeb_integration/integration_manifest.json",
+    "/home/ubuntu/FINAL_TODO_CHECKLIST.md",
+    "/home/ubuntu/SESSION_HANDOVER_VERIFICATION.md"
+  ]
+}
