@@ -34,7 +34,7 @@
 
 **B — Baseline.** `config/engineering_data.yaml` declares version `2.4.1-build.108` (20 May 2026); its lineage `commit_sha` is a placeholder, not a Git SHA.
 
-**I — Identity and integrity.** `workspace_build.py` regenerates the dashboards and `web/workspace_bundle.tar.gz` from the configuration.
+**I — Identity and integrity.** `workspace_build.py` is a **bootstrap generator**: it rewrites `config/engineering_data.yaml`, `config/knowledge_topology.json`, `src/physics_validator.py`, both dashboards and `README.md` from hard-coded text. It does not read your edits.
 
 **O — Orchestration with ownership.** Configuration → `physics_validator.py` → HMI is the only flow (three-node topology in `config/knowledge_topology.json`).
 
@@ -45,10 +45,10 @@
 ## 2. From source to decision
 
 1. Edit heat loads in `config/engineering_data.yaml`.
-2. `physics_validator.py` computes mass flow and checks the balance.
-3. `workspace_build.py` regenerates the dashboards and bundle.
+2. `physics_validator.py` computes mass flow and checks the balance against that file.
+3. Dashboards are static files in `web/`; do **not** run `workspace_build.py` after editing, because it restores its defaults over your changes.
 4. Pages publishes `web/`.
-5. W111 adapters cross-check against QPS property data; admission stays with cryoplant-project.
+5. W111 guards run locally: a wrapper around the local helium engine and a dimensional audit of the YAML. No QPS reference data is compared yet; admission stays with cryoplant-project.
 
 ## 3. What is inside
 
@@ -56,16 +56,16 @@
 |---|---|---|---|
 | Configuration | [`config/`](config/) | Heat loads, mass balances, topology | Demo values |
 | Physics check | [`src/physics_validator.py`](src/physics_validator.py) | Configuration → ṁ, balance verdict | Polynomial He-4 fit |
-| W111 adapters | [`qps_w111_property_adapter.py`](src/qps_w111_property_adapter.py), [`qps_w111_mass_balance_guard.py`](src/qps_w111_mass_balance_guard.py) | QPS property data → cross-check | Admission is cryoplant-project's |
+| W111 adapters | [`qps_w111_property_adapter.py`](src/qps_w111_property_adapter.py), [`qps_w111_mass_balance_guard.py`](src/qps_w111_mass_balance_guard.py) | Local helium engine and YAML → admission and dimensional-defect guards | Quarantined, compatibility only; no QPS reference comparison yet |
 | Dashboards | [`web/index.html`](web/index.html), [`web/app.html`](web/app.html) | Model → hub and Plotly HMI | A view |
-| Regeneration | [`workspace_build.py`](workspace_build.py) | Configuration → dashboards, bundle | — |
+| Bootstrap generator | [`workspace_build.py`](workspace_build.py) | Hard-coded text → config, validator, dashboards, README, bundle | **Destructive**: overwrites edits, including this README |
 | Orchestration notes | Root `*_MCP_*.md`, [`CROSS_CHAT_ORCHESTRATION.md`](CROSS_CHAT_ORCHESTRATION.md) | Design notes for MCP bridges | Design, not running services |
 
 ## 4. Where cryogenic-accelerator-workspace sits in the federation
 
 | Neighbour | Keeps | Interface with cryogenic-accelerator-workspace |
 |---|---|---|
-| [cryoplant-project](https://github.com/GBOGEB/cryoplant-project) (private) | QPS engineering SSOT and release identity | Validated QPS helium parameters and W111 admission |
+| [cryoplant-project](https://github.com/GBOGEB/cryoplant-project) (private) | QPS engineering SSOT and release identity | Validated QPS helium parameters and W111 admission; not yet compared here |
 | [document-organization-system](https://github.com/GBOGEB/document-organization-system) | Material property dashboard | Integration plan in [`DOCUMENT_ORG_INTEGRATION_PLAN.md`](DOCUMENT_ORG_INTEGRATION_PLAN.md) |
 | [pipeline-automation-hub](https://github.com/GBOGEB/pipeline-automation-hub) | Routing, JADE census, Mission Control | Routes Level-1 receipts |
 
@@ -76,12 +76,13 @@ Declared architecture, not a run receipt.
 ```mermaid
 flowchart LR
   C[config/engineering_data.yaml] --> P[physics_validator.py<br/>m = Q / dh]
-  P --> B[workspace_build.py] --> W[web/ dashboards] --> G[Pages]
+  W[web/ dashboards] --> G[Pages]
+  B[workspace_build.py<br/>bootstrap, hard-coded] -. overwrites .-> C & P & W
 ```
 
 ## 6. Status and open gates
 
-**Snapshot: `main@b001194`, read 15 November 2026.** Rows point at live owners; open the link for the current position.
+**Snapshot: `main@b001194`, read 15 November 2026.** Linked rows point at live owners; unlinked rows are as read on the snapshot date.
 
 | Gate | Status | What would close it |
 |---|---|---|
@@ -89,6 +90,7 @@ flowchart LR
 | Pages | Branch-source build **succeeded** 25 Oct 2026 | — |
 | Physics tests | **None** in `tests/` (only branch hygiene) | Mass-balance tests against reference values |
 | Lineage | Configuration `commit_sha` is a placeholder | Bind to a real commit |
+| Generator | `workspace_build.py` overwrites configuration and README with hard-coded text | Make it read the existing configuration, or retire it |
 | Licence | **No `LICENSE` file**; the previous README called the code proprietary | Owner declares a licence |
 
 ## 7. Run it locally
@@ -96,13 +98,14 @@ flowchart LR
 ```bash
 pip install numpy pyyaml
 python3 -c "import yaml,sys; sys.path.insert(0,'src'); from physics_validator import verify_mass_balance; print(verify_mass_balance(yaml.safe_load(open('config/engineering_data.yaml'))))"
-python3 workspace_build.py      # regenerate dashboards and bundle
+# Do not run workspace_build.py on a working tree: it overwrites config, validator, dashboards and README.
 ```
 
 Then open `web/index.html` (hub) or `web/app.html` (HMI workbench).
 
 ## 8. Evidence rules and non-compensation
 
+- **Never run the bootstrap generator over edits**: it is destructive.
 - **Demo, not design**: values and fits are illustrative.
 - **Staged is not installed**: workflows in `docs/` do not run.
 - **A PASS needs a test**: no balance verdict is claimed without one.
@@ -119,7 +122,7 @@ Then open `web/index.html` (hub) or `web/app.html` (HMI workbench).
 | [`integration_2026-05-22/`](integration_2026-05-22/) | May 2026 integration report |
 | [`level1/`](level1/), [`skill/`](skill/), [`MIP/`](MIP/) | Level-1 worker |
 
-**Next actions** (match §6): decide on the staged CI suite → add physics tests → bind lineage to a real commit → declare a licence.
+**Next actions** (match §6): make the generator non-destructive or retire it → decide on the staged CI suite → add physics tests → bind lineage to a real commit → declare a licence.
 
 ---
 
